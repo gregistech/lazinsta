@@ -1,0 +1,9 @@
+organization.txt
+api_key.txt
+system.txt
+user.txt
+texts.txt
+
+.venv
+
+*.swp
