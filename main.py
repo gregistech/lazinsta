@@ -1,54 +1,39 @@
-from PIL import Image, ImageFilter, ImageEnhance, ImageDraw, ImageFont
-import textwrap
+from img_editor import ImageEditor 
+from img_gen import ImageGenerator 
 
-FONT_PATH = "barlow.ttf"
-BLUR_RADIUS = 10
-BRIGHTNESS = .25
-ASPECT_RATIO = (1, 1)
-def crop_center(image, aspect_ratio):
-	width, height = image.size
-	new_aspect_ratio = float(aspect_ratio[0]) / aspect_ratio[1]
-	if float(width) / height > new_aspect_ratio:
-		new_size = (int(height * new_aspect_ratio), height)
-		left = (width - new_size[0]) / 2
-		top = 0
-	else:
-		new_size = (width, int(width / new_aspect_ratio))
-		left = 0
-		top = (height - new_size[1]) / 2
-	right = left + new_size[0]
-	bottom = top + new_size[1]
-	return image.crop((int(left), int(top), int(right), int(bottom)))
-def write_brand(image):
-	draw = ImageDraw.Draw(image)
-	font = ImageFont.truetype(FONT_PATH, 64)
-
-	bbox = (image.width / 2, image.height * .875)
-	text = "IskolaHACK"
-
-	draw.text(bbox, text, anchor="mm", font=font, fill=(217, 112, 74))
-	return image
-def write_text(image, text):
-	draw = ImageDraw.Draw(image)
-	font = ImageFont.truetype(FONT_PATH, 72)
-
-	bbox = (image.width / 2, image.height / 2)	
-	text = "\n".join(textwrap.wrap(text, 30))
-
-	draw.text(bbox, text, anchor="mm", font=font, fill=(255, 255, 255))
-	return image
-def edit_image(image, text):
-	cropped = crop_center(image, ASPECT_RATIO)
-	blurred = cropped.filter(ImageFilter.GaussianBlur(radius=BLUR_RADIUS))
-	faded = ImageEnhance.Brightness(blurred).enhance(BRIGHTNESS)
-	written = write_text(faded, text)
-	branded = write_brand(written)
+def edit_image(img_editor, image, text):
+	cropped = img_editor.crop_center(image)
+	blurred = img_editor.blur(cropped)
+	faded = img_editor.fade(blurred)
+	written = img_editor.write_text(faded, text)
+	branded = img_editor.write_brand(written)
 	return branded
+def choose_image(text):
+	run_gen = True
+	while run_gen:
+		print("Generating images...")
+		images = img_gen.generate(text)
+		for i, image in enumerate(images):
+			image.show()
+			input(f"Showing image {i+1}... (Press ENTER to continue)")
+		print("Type your choice to use an image.")
+		print("Type 'r' to rerun generation.")
+		print("Type 'q' to return to the last screen.")
+		while True:
+			try:
+				return images[get_choice(len(images))]
+			except QuitNotice:
+				run_gen = False
+				break
+			except RerunNotice:
+				break
+	raise QuitNotice
 
 
 def get_conf(key):
 	with open(f"{key}.txt", "r") as f:
 		return f.read().rstrip()
+
 import openai
 openai.organization = get_conf("organization") 
 openai.api_key = get_conf("api_key")
@@ -64,9 +49,19 @@ def generate_texts():
 			n=4
 		).choices)
 	)
-from urllib.request import urlopen
-def generate_images(text):
-	return list(map(lambda data: Image.open(urlopen(data.url)), openai.Image.create(prompt=text, n=4).data))
+
+USER_HASHTAG = get_conf("user_hashtag")
+def generate_hashtags(text):
+	return list(map(lambda choice: choice.message.content, openai.ChatCompletion.create(
+			model="gpt-3.5-turbo",
+			messages=[
+				{ "role": "system", "content": SYSTEM },
+				{ "role": "user", "content": USER_HASHTAG.replace("{text}", text) }
+			],
+			n=4
+		).choices)
+	)
+
 
 def print_instructions():
 	print("Type your choice to save a text.")
@@ -83,7 +78,7 @@ class QuitNotice(Exception):
 	pass
 class RerunNotice(Exception):
 	pass
-def get_choice():
+def get_choice(length):
 	while True:
 		inp = input(f"{PREFIX} ")
 		if inp == "q":
@@ -94,6 +89,8 @@ def get_choice():
 			choice = int(inp) - 1
 			if choice < 0:
 				raise IndexError("Negative indexes would roll over.")
+			elif choice >= length:
+				raise IndexError("Out of range choice!")
 			return choice
 		except IndexError:
 			print("Out of range choice!")
@@ -127,7 +124,7 @@ def edit_texts():
 			print_texts(texts)
 			print_instructions()
 			try:	
-				text = texts[get_choice()]
+				text = texts[get_choice(len(texts))]
 				texts.remove(text)
 				save_text(text)
 				print("Text saved!")
@@ -136,6 +133,7 @@ def edit_texts():
 				break
 			except RerunNotice:
 				break
+import editor
 def choose_text():
 	texts = get_texts()
 	texts.reverse()
@@ -143,38 +141,42 @@ def choose_text():
 	print("Choose the used text.")
 	while True:
 		try:
-			text = texts[get_choice()]
+			text = texts[get_choice(len(texts))]
 			delete_text(text)
+			text = editor.edit(contents=text.encode("UTF-8")).decode("UTF-8")
 			return text
 		except QuitNotice:
 			raise QuitNotice
 		except RerunNotice:
 			continue
 
-def choose_image(text):
+def choose_hashtags(text):
 	run_gen = True
 	while run_gen:
-		print("Generating images...")
-		images = generate_images(text)
-		for i, image in enumerate(images):
-			image.show()
-			input(f"Showing image {i+1}... (Press ENTER to continue)")
-		print("Type your choice to use an image.")
+		print("Generating hashtags...")
+		hashtags = generate_hashtags(text)
+		print_texts(hashtags)
+		print("Type your choice to use a hashtag batch.")
 		print("Type 'r' to rerun generation.")
 		print("Type 'q' to return to the last screen.")
 		while True:
 			try:
-				return images[get_choice()]
+				return hashtags[get_choice(len(hashtags))]
 			except QuitNotice:
 				run_gen = False
 				break
 			except RerunNotice:
 				break
 	raise QuitNotice
-	
+
+
+img_gen = ImageGenerator(get_conf("organization"), get_conf("api_key"))
+
+FONT_PATH = "barlow.ttf"
+BRANDING = "IskolaHACK"
+img_editor = ImageEditor(FONT_PATH, BRANDING)
 
 PREFIX = "(lazinsta)"
-
 while True:
 	print("Type '0' to edit texts.")
 	print("Type '1' to generate posts.")
@@ -185,8 +187,10 @@ while True:
 	elif inp == "1":
 		try:
 			text = choose_text()
+			hashtags = choose_hashtags(text)
 			image = choose_image(text)
-			final = edit_image(image, text)
+			final = edit_image(img_editor, image, text)
+			print(f"Your hashtags: {hashtags}")
 			create_post(final)
 		except QuitNotice:
 			break
