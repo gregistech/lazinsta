@@ -13,4 +13,7 @@ class PostPublisher:
 		self._work_dir = work_dir
 	def publish(self, post):
 		print(post.caption)
+		for tag in post.tags:
+			print(f"#{tag}", end="")
+		print()
 		post.image.save("{uuid.uuid4()}.jpg")

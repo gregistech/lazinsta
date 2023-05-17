@@ -34,6 +34,8 @@ class TUI:
 				print("Type 'q' to exit.")
 				choice = self._get_choice(2)
 				if choice == 0:
+					preset = self._choose_preset()
+					self._preset_manager.set(preset)
 				elif choice == 1:
 					self._edit_texts()
 				elif choice == 2:
@@ -49,7 +51,7 @@ class TUI:
 						)
 						self._post_publisher.publish(post)
 					except QuitNotice:
-						break
+						print("Returning to main menu.")
 				else:
 					print("Unknown command!")
 			except KeyboardInterrupt:
@@ -122,7 +124,6 @@ class TUI:
 		while run_gen:
 			print("Generating texts...")
 			texts = self._txt_gen.generate(
-				self._preset_manager.get("identity"), 
 				self._preset_manager.get("instruction")
 			)
 			while True:
@@ -138,6 +139,17 @@ class TUI:
 					break
 				except RerunNotice:
 					break
+	def _choose_preset(self):
+		presets = self._preset_manager.get_presets()
+		self._print_texts(presets)
+		print("Choose the your new preset.")
+		while True:
+			try:
+				return presets[self._get_choice(len(presets)) - 1]
+			except QuitNotice:
+				raise QuitNotice
+			except RerunNotice:
+				continue
 	def _choose_text(self):
 		texts = self._txt_storage.get()
 		texts.reverse()
@@ -172,7 +184,7 @@ class TUI:
 			print("Type 'q' to return to the last screen.")
 			while True:
 				try:
-					return tags[self._get_choice(len(hashtags)) - 1]
+					return batches[self._get_choice(len(batches)) - 1]
 				except QuitNotice:
 					run_gen = False
 					break
