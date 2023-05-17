@@ -14,6 +14,6 @@ class PostPublisher:
 	def publish(self, post):
 		print(post.caption)
 		for tag in post.tags:
-			print(f"#{tag}", end="")
+			print(f"#{tag} ", end="")
 		print()
 		post.image.save(f"{self._work_dir}/{uuid.uuid4()}.jpg")
