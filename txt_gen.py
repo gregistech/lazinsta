@@ -7,15 +7,19 @@ class TextGenerator:
 		self.model = model
 		self._preset_manager = preset_manager	
 	def generate(self, instruction, n = 4):
-		return list(map(lambda choice: choice.message.content, openai.ChatCompletion.create(
-				model=self.model,
-				messages=[
-					{ 
-						"role": "system", 
-						"content": self._preset_manager.get("identity") 
-					},
-					{ "role": "user", "content": instruction }
-				],
-				n=n
-			).choices)
-		)
+		while True:
+			try:
+				return list(map(lambda choice: choice.message.content, openai.ChatCompletion.create(
+						model=self.model,
+						messages=[
+							{ 
+								"role": "system", 
+								"content": self._preset_manager.get("identity") 
+							},
+							{ "role": "user", "content": instruction }
+						],
+						n=n
+					).choices)
+				)
+			except openai.error.RateLimitError:
+				print("Rate limit or overloaded servers! Retrying...")
