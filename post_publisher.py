@@ -16,4 +16,4 @@ class PostPublisher:
 		for tag in post.tags:
 			print(f"#{tag}", end="")
 		print()
-		post.image.save(f"{uuid.uuid4()}.jpg")
+		post.image.save(f"{self._work_dir}/{uuid.uuid4()}.jpg")
