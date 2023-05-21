@@ -122,7 +122,7 @@ class TUI:
 	def _edit_texts(self):
 		run_gen = True
 		while run_gen:
-			topic = input("Make the prompt more specific: ")
+			topic = input("Make the prompt more specific (if the preset allows): ")
 			print("Generating texts...")
 			texts = self._txt_gen.generate(
 				self._preset_manager.get("instruction").replace(
