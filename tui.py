@@ -122,9 +122,13 @@ class TUI:
 	def _edit_texts(self):
 		run_gen = True
 		while run_gen:
+			topic = input("Make the prompt more specific: ")
 			print("Generating texts...")
 			texts = self._txt_gen.generate(
-				self._preset_manager.get("instruction")
+				self._preset_manager.get("instruction").replace(
+					"{topic}", 
+					topic
+				)
 			)
 			while True:
 				self._print_texts(texts)
@@ -154,11 +158,16 @@ class TUI:
 		texts = self._txt_storage.get()
 		texts.reverse()
 		self._print_texts(texts)
+		print(f"{len(texts) + 1}: [use custom text]")
 		print("Choose the used text.")
 		while True:
 			try:
-				text = texts[self._get_choice(len(texts)) - 1]
-				self._txt_storage.delete(text)
+				choice = self._get_choice(len(texts) + 1)
+				if choice < len(texts):
+					text = texts[choice - 1]
+					self._txt_storage.delete(text)
+				else:
+					text = ""
 				return editor.edit(contents=text.encode("UTF-8")).decode("UTF-8")
 			except QuitNotice:
 				raise QuitNotice
