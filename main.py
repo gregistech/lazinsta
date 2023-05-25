@@ -2,7 +2,6 @@ from conf_manager import ConfigManager
 from img_editor import ImageEditor 
 from img_gen import ImageGenerator 
 from txt_gen import TextGenerator
-from txt_storage import TextStorage
 from tui import TUI
 from preset_manager import PresetManager
 from post_publisher import PostPublisher

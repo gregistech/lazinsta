@@ -36,6 +36,14 @@ class ImageEditor:
 
 		draw.text(bbox, text, anchor="mm", font=font, fill=(217, 112, 74))
 		return image
+	def write_count(self, image, count):
+		draw = ImageDraw.Draw(image)
+		font = ImageFont.truetype(self.font_path, 64)
+
+		bbox = (image.width / 2, image.height * (1 - .875))
+
+		draw.text(bbox, str(count), anchor="mm", font=font, fill=(217, 112, 74))
+		return image
 	def write_text(self, image, text):
 		draw = ImageDraw.Draw(image)
 		font = ImageFont.truetype(self.font_path, 72)

@@ -2,6 +2,8 @@ import editor
 import uuid
 from post_publisher import Post
 
+from PIL import Image
+
 class QuitNotice(Exception):
 	pass
 class RerunNotice(Exception):
@@ -35,16 +37,21 @@ class TUI:
 					self._preset_manager.set(preset)
 				elif choice == 1:
 					try:
-						text = self._choose_text()
-						tags = self._choose_tags(text)
-						image = self._choose_image(text)
-						final = self._edit_image(image, text)						
-						post = Post(
-							image = final, 
-							caption = text, 
-							tags = tags
-						)
-						self._post_publisher.publish(post)
+						while True:
+							try:
+								inp = input("The number of posts in this group (empty means one): ")
+								if not inp:
+									count = 1
+								else:
+									count = int(inp)
+								break
+							except ValueError:
+								print("Invalid count!")
+						posts = []
+						for i in range(1, count + 1):
+							posts.append(self._create_post(i))
+						for post in posts:
+							self._post_publisher.publish(post)
 					except QuitNotice:
 						print("Returning to main menu.")
 				else:
@@ -56,6 +63,16 @@ class TUI:
 			except RerunNotice:
 				pass
 		print("Goodbye!")
+	def _create_post(self, count = 1):
+		text = self._choose_text() if self._ask_binary("Do you want to generate text?") else editor.edit(contents="".encode("UTF-8")).decode("UTF-8")
+		tags = self._choose_tags(text) if self._ask_binary("Do you want to generate tags?") else []
+		image = self._choose_image(text) if self._ask_binary("Do you want to generate images?") else Image.open("default_img.jpg")
+		final = self._edit_image(image, text, count)						
+		return Post(
+			image = final, 
+			caption = text, 
+			tags = tags
+		)
 	def _print_texts(self, texts):
 		print()
 		print("-" * 20)
@@ -63,6 +80,13 @@ class TUI:
 			print(f"{i+1}: {text}")
 		print("-" * 20)
 		print()
+	def _ask_binary(self, text):
+		while True:
+			inp = input(f"{text} ('y' or 'n'): ")
+			if inp == "y" or inp == "n":
+				return inp == "y"
+			else:
+				continue
 	def _get_choice(self, length):
 		while True:
 			try:
@@ -82,11 +106,13 @@ class TUI:
 			except:
 				print("Unknown error!")
 
-	def _edit_image(self, image, text):
+	def _edit_image(self, image, text, count = 1):
 		cropped = self._img_editor.crop_center(image)
 		blurred = self._img_editor.blur(cropped)
 		faded = self._img_editor.fade(blurred)
 		written = self._img_editor.write_text(faded, text)
+		if count > 1:
+			written = self._img_editor.write_count(written, count - 1)
 		branded = self._img_editor.write_brand(written)
 		return branded
 	def _choose_image(self, text):
@@ -122,15 +148,12 @@ class TUI:
 			)
 			while True:
 				self._print_texts(texts)
-				print(f"{len(texts) + 1}: [use custom text]")
 				print("Choose the used text.")
 				print("Type 'r' to rerun generation.")
 				print("Type 'q' to return to the last screen.")
 				try:	
 					choice = self._get_choice(len(texts))
-					text = ""
-					if (choice != len(texts) + 1):
-						text = texts[choice - 1]
+					text = texts[choice - 1]
 					return editor.edit(contents=text.encode("UTF-8")).decode("UTF-8")
 				except QuitNotice:
 					run_gen = False
