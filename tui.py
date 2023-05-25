@@ -10,7 +10,6 @@ class RerunNotice(Exception):
 class TUI:
 	def __init__(self, 
 		prefix, 
-		txt_storage, 
 		txt_gen, 
 		img_gen, 
 		img_editor, 
@@ -18,7 +17,6 @@ class TUI:
 		post_publisher
 	):
 		self._prefix = prefix
-		self._txt_storage = txt_storage
 		self._txt_gen = txt_gen
 		self._img_gen = img_gen
 		self._img_editor = img_editor
@@ -29,16 +27,13 @@ class TUI:
 		while True:
 			try:
 				print("Type '0' to choose a preset.")
-				print("Type '1' to edit texts.")
-				print("Type '2' to generate posts.")
+				print("Type '1' to generate posts.")
 				print("Type 'q' to exit.")
-				choice = self._get_choice(2)
+				choice = self._get_choice(1)
 				if choice == 0:
 					preset = self._choose_preset()
 					self._preset_manager.set(preset)
 				elif choice == 1:
-					self._edit_texts()
-				elif choice == 2:
 					try:
 						text = self._choose_text()
 						tags = self._choose_tags(text)
@@ -61,10 +56,6 @@ class TUI:
 			except RerunNotice:
 				pass
 		print("Goodbye!")
-	def _print_instructions(self):
-		print("Type your choice to save a text.")
-		print("Type 'r' to rerun generation.")
-		print("Type 'q' to return to the last screen.")
 	def _print_texts(self, texts):
 		print()
 		print("-" * 20)
@@ -104,8 +95,8 @@ class TUI:
 			print("Generating images...")
 			images = self._img_gen.generate(text)
 			for i, image in enumerate(images):
-				image.show()
-				input(f"Showing image {i+1}... (Press ENTER to continue)")
+				image.save(f"{i+1}.jpg")
+				print(f"Saving image {i+1}.jpg...")
 			print("Type your choice to use an image.")
 			print("Type 'r' to rerun generation.")
 			print("Type 'q' to return to the last screen.")
@@ -118,11 +109,10 @@ class TUI:
 				except RerunNotice:
 					break
 		raise QuitNotice
-
-	def _edit_texts(self):
+	def _choose_text(self):
+		topic = input("Make the prompt more specific (if the preset allows): ")
 		run_gen = True
 		while run_gen:
-			topic = input("Make the prompt more specific (if the preset allows): ")
 			print("Generating texts...")
 			texts = self._txt_gen.generate(
 				self._preset_manager.get("instruction").replace(
@@ -132,12 +122,16 @@ class TUI:
 			)
 			while True:
 				self._print_texts(texts)
-				self._print_instructions()
+				print(f"{len(texts) + 1}: [use custom text]")
+				print("Choose the used text.")
+				print("Type 'r' to rerun generation.")
+				print("Type 'q' to return to the last screen.")
 				try:	
-					text = texts[self._get_choice(len(texts)) - 1]
-					texts.remove(text)
-					self._txt_storage.save(text)
-					print("Text saved!")
+					choice = self._get_choice(len(texts))
+					text = ""
+					if (choice != len(texts) + 1):
+						text = texts[choice - 1]
+					return editor.edit(contents=text.encode("UTF-8")).decode("UTF-8")
 				except QuitNotice:
 					run_gen = False
 					break
@@ -150,25 +144,6 @@ class TUI:
 		while True:
 			try:
 				return presets[self._get_choice(len(presets)) - 1]
-			except QuitNotice:
-				raise QuitNotice
-			except RerunNotice:
-				continue
-	def _choose_text(self):
-		texts = self._txt_storage.get()
-		texts.reverse()
-		self._print_texts(texts)
-		print(f"{len(texts) + 1}: [use custom text]")
-		print("Choose the used text.")
-		while True:
-			try:
-				choice = self._get_choice(len(texts) + 1)
-				if choice < len(texts):
-					text = texts[choice - 1]
-					self._txt_storage.delete(text)
-				else:
-					text = ""
-				return editor.edit(contents=text.encode("UTF-8")).decode("UTF-8")
 			except QuitNotice:
 				raise QuitNotice
 			except RerunNotice:

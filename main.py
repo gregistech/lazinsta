@@ -13,7 +13,6 @@ preset_manager = PresetManager()
 img_gen = ImageGenerator(conf_manager.get_conf("organization"), conf_manager.get_conf("api_key"))
 img_editor = ImageEditor(conf_manager.get_conf("font_path"), conf_manager.get_conf("branding"))
 
-txt_storage = TextStorage()
 txt_gen = TextGenerator(
 	conf_manager.get_conf("organization"), 
 	conf_manager.get_conf("api_key"), 
@@ -25,7 +24,6 @@ post_publisher = PostPublisher()
 PREFIX = "(lazinsta)"
 tui = TUI(
 	PREFIX, 
-	txt_storage, 
 	txt_gen, 
 	img_gen, 
 	img_editor, 
